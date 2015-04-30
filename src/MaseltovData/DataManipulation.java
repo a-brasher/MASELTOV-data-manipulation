@@ -1,117 +1,20 @@
 package MaseltovData;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
-class EventData	{
-	
 
-	private Long iEventid;
-	private String sSource;
-	private String sTimeStamp;
-	private String sKey;
-	private String sValue;
-
-	public EventData(Long iEventid, String sSource, String sTimeStamp, String sKey, String sValue) 
-	{
-		super();
-		this.iEventid = iEventid;
-		this.sSource = sSource;
-		this.sTimeStamp = sTimeStamp;
-		this.sKey = sKey;
-		this.sValue = sValue;
-	}
-
-	public EventData(Long iEventid, String sSource, String sTimeStamp) 
-	{
-		super();
-		this.iEventid = iEventid;
-		this.sSource = sSource;
-		this.sTimeStamp = sTimeStamp;
-	}
-	
-	/**
-	 * @return the iEventid
-	 */
-	public Long getiEventid() {
-		return iEventid;
-	}
-
-	/**
-	 * @param iEventid the iEventid to set
-	 */
-	public void setiEventid(Long iEventid) {
-		this.iEventid = iEventid;
-	}
-
-	/**
-	 * @return the sSource
-	 */
-	public String getsSource() {
-		return sSource;
-	}
-
-	/**
-	 * @param sSource the sSource to set
-	 */
-	public void setsSource(String sSource) {
-		this.sSource = sSource;
-	}
-
-	/**
-	 * @return the sTimeStamp
-	 */
-	public String getsTimeStamp() {
-		return sTimeStamp;
-	}
-
-	/**
-	 * @param sTimeStamp the sTimeStamp to set
-	 */
-	public void setsTimeStamp(String sTimeStamp) {
-		this.sTimeStamp = sTimeStamp;
-	}
-
-	/**
-	 * @return the sKey
-	 */
-	public String getsKey() {
-		return sKey;
-	}
-
-	/**
-	 * @param sKey the sKey to set
-	 */
-	public void setsKey(String sKey) {
-		this.sKey = sKey;
-	}
-
-	/**
-	 * @return the sValue
-	 */
-	public String getsValue() {
-		return sValue;
-	}
-
-	/**
-	 * @param sValue the sValue to set
-	 */
-	public void setsValue(String sValue) {
-		this.sValue = sValue;
-	}
-	
-	public String toString()	{
-		String sResult = "";
-		sResult = "Id:" + this.getiEventid() + " Source: " + this.getsSource() + " Time: " + this.getsTimeStamp() + " Key: " + this.getsKey() + " Value: " + this.getsValue(); 
-		return sResult;
-	}
-
-}
 public class DataManipulation {
 	public final  static String GET_LANGUAGE_LESSONS_QUERY = "select * from events where  source = 'LanguageLearning'" +
 			" AND userid = ?; ";
 	public final static String GET_EVENT_DATA_QUERY = "select * from event_data where event_id = ?;";
+	public final static String GET_TYPE_EVENT_DATA_QUERY = "select * from event_data where event_data.key = ?;";
+	public final static String CREATE_LL_EVENTS_FOR_USER_VIEW_PRE = "create view LLEventsUser";
+	public final static String CREATE_LL_EVENTS_FOR_USER_VIEW_POST = "as select * from LanguageLearningEvents where userid = ";
 	
 	private static EventData processEvent(ResultSet rs, Connection conn) throws SQLException
 	{
@@ -162,26 +65,56 @@ public class DataManipulation {
 			String dbPassword = "mdb.mdb.1.2";
 			Connection conn = null;
 			String sUserId = "418";
+			String sKey = "duration";
 			conn = DriverManager.getConnection("jdbc:mysql://localhost/maseltov-ou?" + "user=maseltov-user&password=mdb.mdb.1.2");
-			PreparedStatement pstmt = conn.prepareStatement(GET_LANGUAGE_LESSONS_QUERY);
-			pstmt.setString(1, sUserId);
+			PreparedStatement pstmtLanguageLessons = conn.prepareStatement(GET_LANGUAGE_LESSONS_QUERY);
+			pstmtLanguageLessons.setString(1, sUserId);
 			// Get all the Lnaguagge Lesson events for the specified user 
-			ResultSet rs = pstmt.executeQuery();
+			ResultSet rs = pstmtLanguageLessons.executeQuery();
+			PreparedStatement pstmtEventData = conn.prepareStatement(GET_TYPE_EVENT_DATA_QUERY);
+			pstmtEventData.setString(1, sKey);
+			
+			// Get all the Event data  for the specified key
+			ResultSet rsEventData = pstmtEventData.executeQuery();
 			Map<Long, EventData>oEventMap = new HashMap<Long, EventData>();
 			EventData oEventData;
-			int i = 0;
-			if (rs != null) {
-				while (rs.next() && i < 2000) {
+			Long iCurrentEventId = (long) 0;
+			int i = 0; int j=0;  List<HashMap<String,Object>> oLanguageLessonEvents, oDurationData;
+			if (rs != null && rsEventData != null) {
+				oLanguageLessonEvents = convertResultSetToList(rs);
+				oDurationData = convertResultSetToList(rsEventData);
+				Iterator<HashMap<String, Object>> itLessonEvents = oLanguageLessonEvents.iterator();
+				while (itLessonEvents.hasNext())	{
+					HashMap<String,Object> oCurrentLessonData = itLessonEvents.next();
+					// Get the id of the current Language Lesson event
+					iCurrentEventId = (Long) oCurrentLessonData.get("id");
+					Iterator<HashMap<String, Object>> itDurationData = oDurationData.iterator();
+					while (itDurationData.hasNext())	{
+						HashMap<String,Object> oCurrentDurationData =  itDurationData.next();
+						Long  iCurrentDurationDataId = (Long) oCurrentDurationData.get("event_id");
+						if (iCurrentDurationDataId.equals(iCurrentEventId))	{
+							i++;
+						}
+						else {
+							j++;
+						}
+					}
+				}
+/**				
+				while (rs.next() && i < 1500) {
 					// process each event to acquire the relevant event data
 					oEventData = processEvent(rs, conn);	
 					oEventMap.put(oEventData.getiEventid(), oEventData);
 					++i;
 				}
+***************/				
 			}
 
 
-			if (pstmt != null)
-				pstmt.close();
+			if (pstmtLanguageLessons != null)
+				pstmtLanguageLessons.close();
+			if (pstmtEventData != null)
+				pstmtEventData.close();
 		}
 		// Do something with the Connection ... } 
 		catch (SQLException ex) { 
@@ -190,6 +123,22 @@ public class DataManipulation {
 			System.out.println("VendorError: " + ex.getErrorCode()); }
 	}
 
+	
+	public static List<HashMap<String,Object>> convertResultSetToList(ResultSet rs) throws SQLException {
+	    ResultSetMetaData md = rs.getMetaData();
+	    int columns = md.getColumnCount();
+	    List<HashMap<String,Object>> list = new ArrayList<HashMap<String,Object>>();
+
+	    while (rs.next()) {
+	        HashMap<String,Object> row = new HashMap<String, Object>(columns);
+	        for(int i=1; i<=columns; ++i) {
+	            row.put(md.getColumnName(i),rs.getObject(i));
+	        }
+	        list.add(row);
+	    }
+
+	    return list;
+	}
 }
 
 
