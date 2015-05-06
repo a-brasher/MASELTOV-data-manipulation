@@ -2,6 +2,7 @@ package MaseltovData;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -14,41 +15,11 @@ public class DataManipulation {
 	public final static String GET_EVENT_DATA_QUERY = "select * from event_data where event_id = ?;";
 	public final static String GET_TYPE_EVENT_DATA_QUERY = "select * from event_data where event_data.key = ?;";
 	public final static String CREATE_LL_EVENTS_FOR_USER_VIEW_PRE = "create view LLEventsUser";
-	public final static String CREATE_LL_EVENTS_FOR_USER_VIEW_POST = "as select * from LanguageLearningEvents where userid = ";
+	public final static String CREATE_LL_EVENTS_FOR_USER_VIEW_POST = " as select * from LanguageLearningEvents where userid = '";
+	static Integer iUserIds[] = new Integer[] {407, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 424, 425, 428 };
+	public final static ArrayList<Integer> oUserIdList= new ArrayList<Integer>(Arrays.asList(iUserIds));
 	
-	private static EventData processEvent(ResultSet rs, Connection conn) throws SQLException
-	{
 
-		Long	iEventId			= rs.getLong(1);
-		String	sSource		= rs.getString(2);
-		String 	tTimeStamp  	= 	rs.getString(3);
-		EventData  oEvent = new EventData(iEventId, sSource, tTimeStamp);
-		getEventData(oEvent, conn);
-		return oEvent;
-	}
-
-	private static void processEventData(ResultSet rs, EventData oEvent) throws SQLException
-	{
-
-		Long	nId		= rs.getLong(1);
-		String	sKey	=rs.getString(3);
-		String 	sValue  = rs.getString(4);
-		oEvent.setsKey(sKey);
-		oEvent.setsValue(sValue);
-		oEvent.setiEventid(nId);
-	}
-	private static void getEventData(EventData oEvent, Connection conn ) throws SQLException
-	{
-		Long iEventId = oEvent.getiEventid();
-		PreparedStatement pstmt = conn.prepareStatement(GET_EVENT_DATA_QUERY);
-		pstmt.setLong(1, iEventId);
-		ResultSet rs = pstmt.executeQuery();
-		if (rs != null) {
-			while (rs.next()) {
-				processEventData(rs, oEvent);			
-			}
-		}
-	}
 	public static void main(String[] args) {
 
 		try { 
@@ -67,6 +38,11 @@ public class DataManipulation {
 			String sUserId = "418";
 			String sKey = "duration";
 			conn = DriverManager.getConnection("jdbc:mysql://localhost/maseltov-ou?" + "user=maseltov-user&password=mdb.mdb.1.2");
+			
+			createLanguageLearningEventsViews(conn);
+			
+		
+			
 			PreparedStatement pstmtLanguageLessons = conn.prepareStatement(GET_LANGUAGE_LESSONS_QUERY);
 			pstmtLanguageLessons.setString(1, sUserId);
 			// Get all the Lnaguagge Lesson events for the specified user 
@@ -124,6 +100,36 @@ public class DataManipulation {
 	}
 
 	
+	private static void createLanguageLearningEventsViews(Connection conn) {
+		// Note Need Create view permissions for user to be in place e.g. 
+		// GRANT create view ON `maseltov-ou`.*  TO `maseltov-user`@'localhost' IDENTIFIED BY PASSWORD 'blahblahblah';
+		String sQuery = "";  String sCurrentUserId = "";
+		Iterator<Integer> oIt = oUserIdList.iterator();
+		int i=0;
+		PreparedStatement pstmtLLForUser = null;
+		while (oIt.hasNext())	{
+			sCurrentUserId = oIt.next().toString();
+			sQuery = CREATE_LL_EVENTS_FOR_USER_VIEW_PRE + sCurrentUserId + CREATE_LL_EVENTS_FOR_USER_VIEW_POST + sCurrentUserId +"';";
+			try {
+			pstmtLLForUser = conn.prepareStatement(sQuery);
+			//ResultSet rs = pstmtLLForUser.executeUpdate();
+			pstmtLLForUser.executeUpdate();
+			if (pstmtLLForUser != null)
+				pstmtLLForUser.close();
+			++i;
+			}
+		
+			catch (SQLException ex) { 
+				// handle any errors System.out.println("SQLException: " + ex.getMessage()); 
+				System.out.println("SQLState: " + ex.getSQLState()); 
+				System.out.println("VendorError: " + ex.getErrorCode());
+				System.out.println("Message: " +  ex.getMessage());
+			}
+		}   
+		
+	}
+
+
 	public static List<HashMap<String,Object>> convertResultSetToList(ResultSet rs) throws SQLException {
 	    ResultSetMetaData md = rs.getMetaData();
 	    int columns = md.getColumnCount();
@@ -139,6 +145,41 @@ public class DataManipulation {
 
 	    return list;
 	}
+	
+	private static EventData processEvent(ResultSet rs, Connection conn) throws SQLException
+	{
+
+		Long	iEventId			= rs.getLong(1);
+		String	sSource		= rs.getString(2);
+		String 	tTimeStamp  	= 	rs.getString(3);
+		EventData  oEvent = new EventData(iEventId, sSource, tTimeStamp);
+		getEventData(oEvent, conn);
+		return oEvent;
+	}
+
+	private static void processEventData(ResultSet rs, EventData oEvent) throws SQLException
+	{
+
+		Long	nId		= rs.getLong(1);
+		String	sKey	=rs.getString(3);
+		String 	sValue  = rs.getString(4);
+		oEvent.setsKey(sKey);
+		oEvent.setsValue(sValue);
+		oEvent.setiEventid(nId);
+	}
+	private static void getEventData(EventData oEvent, Connection conn ) throws SQLException
+	{
+		Long iEventId = oEvent.getiEventid();
+		PreparedStatement pstmt = conn.prepareStatement(GET_EVENT_DATA_QUERY);
+		pstmt.setLong(1, iEventId);
+		ResultSet rs = pstmt.executeQuery();
+		if (rs != null) {
+			while (rs.next()) {
+				processEventData(rs, oEvent);			
+			}
+		}
+	}
+	
 }
 
 
