@@ -1,4 +1,4 @@
-package MaseltovData;
+package maseltovData;
 
 public class EventData 
 	{

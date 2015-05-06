@@ -1,5 +1,7 @@
-package MaseltovData;
+package maseltovData;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,11 +16,23 @@ public class DataManipulation {
 			" AND userid = ?; ";
 	public final static String GET_EVENT_DATA_QUERY = "select * from event_data where event_id = ?;";
 	public final static String GET_TYPE_EVENT_DATA_QUERY = "select * from event_data where event_data.key = ?;";
+	public final static String llEventUserView = "LLEventsUser";
 	public final static String CREATE_LL_EVENTS_FOR_USER_VIEW_PRE = "create view LLEventsUser";
 	public final static String CREATE_LL_EVENTS_FOR_USER_VIEW_POST = " as select * from LanguageLearningEvents where userid = '";
+	/** create view testX as select lleventsuser407.userid, lleventsuser407.id, lleventsuser407.source, lleventsuser407.timestamp,
+	 *  event_data.event_id, event_data.key, event_data.value  from lleventsuser407  INNER JOIN event_data on event_data.event_id = 
+	 *  lleventsuser407.id;
+	 */
+	//																			1			2, 3, 4, 5. 6, 7, 8 	 9			  10   11  12
+	public final static String CREATE_LL_EVENTDATA_FOR_USER_VIEW = "create view ? as select ?, ?, ?, ?, ?, ?, ? from ? INNER JOIN ? on ? = ?;";
+			
+	public final static String CREATE_LL_EVENTDATA_FOR_USER_VIEW_POST = " as select * from LLEventsUser";
 	static Integer iUserIds[] = new Integer[] {407, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 424, 425, 428 };
+	public final static String EVENTDATATABLE = "event_data";
+	public final static String llEventDataUserView = "llEventDataUser";
 	public final static ArrayList<Integer> oUserIdList= new ArrayList<Integer>(Arrays.asList(iUserIds));
-	
+	private static final Path oPath = Paths.get("C:\\Users\\ajb785\\workspace\\MASELTOV data manipulation\\output");
+	 
 
 	public static void main(String[] args) {
 
@@ -39,10 +53,25 @@ public class DataManipulation {
 			String sKey = "duration";
 			conn = DriverManager.getConnection("jdbc:mysql://localhost/maseltov-ou?" + "user=maseltov-user&password=mdb.mdb.1.2");
 			
-			createLanguageLearningEventsViews(conn);
-			
+	//		createLanguageLearningEventsViews(conn);
+	//		createEventDataViews(conn, llEventDataUserView, EVENTDATATABLE );
 		
-			
+			MysqlToXls oMysqlToXls = new MysqlToXls(conn);
+			Iterator<Integer> oIt = oUserIdList.iterator();
+			int i=0;
+			String sCurrentUserId = "";  String sFilename = "";
+			while (oIt.hasNext())	{
+				sCurrentUserId = oIt.next().toString();
+				sFilename = oPath.toString() + "\\LanguageLessonDurationDataUser" + sCurrentUserId + ".xls";
+				try	{
+					oMysqlToXls.generateXls(llEventDataUserView + sCurrentUserId, sFilename);
+				}
+				catch (Exception oEx)	{
+
+				}
+			}
+				
+			/**
 			PreparedStatement pstmtLanguageLessons = conn.prepareStatement(GET_LANGUAGE_LESSONS_QUERY);
 			pstmtLanguageLessons.setString(1, sUserId);
 			// Get all the Lnaguagge Lesson events for the specified user 
@@ -76,14 +105,7 @@ public class DataManipulation {
 						}
 					}
 				}
-/**				
-				while (rs.next() && i < 1500) {
-					// process each event to acquire the relevant event data
-					oEventData = processEvent(rs, conn);	
-					oEventMap.put(oEventData.getiEventid(), oEventData);
-					++i;
-				}
-***************/				
+				
 			}
 
 
@@ -91,6 +113,7 @@ public class DataManipulation {
 				pstmtLanguageLessons.close();
 			if (pstmtEventData != null)
 				pstmtEventData.close();
+			**/
 		}
 		// Do something with the Connection ... } 
 		catch (SQLException ex) { 
@@ -130,6 +153,50 @@ public class DataManipulation {
 	}
 
 
+	private static void createEventDataViews(Connection conn, String sViewToBeCreated, String sViewTobeJoined) {
+	/*** Generate the event data for a particular view 			*****/
+		// Note Need Create view permissions for user to be in place e.g. 
+		// GRANT create view ON `maseltov-ou`.*  TO `maseltov-user`@'localhost' IDENTIFIED BY PASSWORD 'blahblahblah';
+		String sQuery = "";  String sCurrentUserId = "";
+		String sTemp = "create view ";
+		Iterator<Integer> oIt = oUserIdList.iterator();
+		int i=0;
+		PreparedStatement pstmtLLForUser = null;
+		while (oIt.hasNext())	{
+			sCurrentUserId = oIt.next().toString();
+			//sQuery = CREATE_LL_EVENTDATA_FOR_USER_VIEW;
+			sQuery = sTemp + sViewToBeCreated + sCurrentUserId  + " as select "
+					+ llEventUserView + sCurrentUserId + ".userid, "  
+					+  llEventUserView + sCurrentUserId + ".id, " 
+					+ llEventUserView + sCurrentUserId + ".source, "
+					+ llEventUserView + sCurrentUserId + ".timestamp, "
+					+  sViewTobeJoined  + ".event_id,  " 
+					+ sViewTobeJoined  + ".key, "
+					+ sViewTobeJoined  + ".value "
+					+ " from " + llEventUserView  + sCurrentUserId
+					+ " INNER JOIN " + sViewTobeJoined
+					+ " on " + EVENTDATATABLE + ".event_id  "
+					+ " = " + llEventUserView + sCurrentUserId + ".id; ";
+			try {
+			pstmtLLForUser = conn.prepareStatement(sQuery);
+			pstmtLLForUser.executeUpdate();
+			
+			if (pstmtLLForUser != null)
+				pstmtLLForUser.close();
+			++i;
+			}
+		
+			catch (SQLException ex) { 
+				// handle any errors System.out.println("SQLException: " + ex.getMessage()); 
+				System.out.println("SQLState: " + ex.getSQLState()); 
+				System.out.println("VendorError: " + ex.getErrorCode());
+				System.out.println("Message: " +  ex.getMessage());
+			}
+		}   
+		
+	}
+
+	
 	public static List<HashMap<String,Object>> convertResultSetToList(ResultSet rs) throws SQLException {
 	    ResultSetMetaData md = rs.getMetaData();
 	    int columns = md.getColumnCount();
