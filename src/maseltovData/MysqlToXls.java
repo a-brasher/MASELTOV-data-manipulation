@@ -2,7 +2,11 @@ package maseltovData;
 
 import java.io.*;
 import java.sql.*;
+
 import org.apache.poi.hssf.usermodel.*;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CreationHelper;
+
 import java.util.*;
 
 /** From https://mikescode.wordpress.com/2008/02/16/exporting-a-mysql-table-to-excel-xls-in-java/ **/
@@ -31,6 +35,9 @@ public class MysqlToXls {
 	    // Create new Excel workbook and sheet
 	    HSSFWorkbook xlsWorkbook = new HSSFWorkbook();
 	    HSSFSheet xlsSheet = xlsWorkbook.createSheet();
+	    CreationHelper createHelper = xlsWorkbook.getCreationHelper();
+	    CellStyle oDateCellStyle = xlsWorkbook.createCellStyle();
+	    oDateCellStyle.setDataFormat( createHelper.createDataFormat().getFormat("yyyy-mm-dd hh:mm:ss"));
 	    short rowIndex = 0;
 	 
 	    // Execute SQL query
@@ -43,6 +50,7 @@ public class MysqlToXls {
 	    ResultSetMetaData colInfo = rs.getMetaData();
 	    List<String> colNames = new ArrayList<String>();
 	    HSSFRow titleRow = xlsSheet.createRow(rowIndex++);
+	    
 	 
 	    for (int i = 1; i <= colInfo.getColumnCount(); i++) {
 	      colNames.add(colInfo.getColumnName(i));
@@ -59,11 +67,16 @@ public class MysqlToXls {
 	    	  
 	        dataRow.createCell(colIndex++).setCellValue(
 	          new HSSFRichTextString(rs.getString(colName)));
+	       if (colName.equals("timestamp"))	{
+	    	   dataRow.getCell(colIndex-1).setCellStyle(oDateCellStyle);
+	       }
+	        
 	      }
 	    }
 	 
 	    // Write to disk
 	    xlsWorkbook.write(new FileOutputStream(filename));
+	    xlsWorkbook.close();
 	  }
 	 
 	  // Close database connection

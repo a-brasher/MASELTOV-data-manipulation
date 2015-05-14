@@ -8,7 +8,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+
+import de.micromata.opengis.kml.v_2_2_0.*;
+
 
 
 public class DataManipulation {
@@ -25,9 +27,15 @@ public class DataManipulation {
 	 */
 	//																			1			2, 3, 4, 5. 6, 7, 8 	 9			  10   11  12
 	public final static String CREATE_LL_EVENTDATA_FOR_USER_VIEW = "create view ? as select ?, ?, ?, ?, ?, ?, ? from ? INNER JOIN ? on ? = ?;";
+	
+	/** SQL statement to insert a new UserLocationEventData Record into the UserLocationEventData table.*/
+	public final static String INSERT_USERLOCATIONEVENTDATA_QUERY =
+		"INSERT INTO UserLocationEventData (userid, event_id, timestamp, longitude, latitude) " +
+		"VALUES (?, ?, ?, ?, ?) ";
 			
 	public final static String CREATE_LL_EVENTDATA_FOR_USER_VIEW_POST = " as select * from LLEventsUser";
 	static Integer iUserIds[] = new Integer[] {407, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 424, 425, 428 };
+	static String iMappIds[] = 	new String[] {"MApp81", "MApp80", "MApp82", "MApp83", "MApp84", "MApp85", "MApp86", "MApp87", "MApp88", "MApp89", "MApp90", "MApp91", "MApp92", "MApp93", "MApp94", "MApp98", "MApp999", "MApp100"};
 	public final static String EVENTDATATABLE = "event_data";
 	public final static String llEventDataUserView = "llEventDataUser";
 	public final static ArrayList<Integer> oUserIdList= new ArrayList<Integer>(Arrays.asList(iUserIds));
@@ -49,72 +57,26 @@ public class DataManipulation {
 			String dbUser = "maseltov-user";
 			String dbPassword = "mdb.mdb.1.2";
 			Connection conn = null;
-			String sUserId = "418";
-			String sKey = "duration";
+			
 			conn = DriverManager.getConnection("jdbc:mysql://localhost/maseltov-ou?" + "user=maseltov-user&password=mdb.mdb.1.2");
 			
 	//		createLanguageLearningEventsViews(conn);
 	//		createEventDataViews(conn, llEventDataUserView, EVENTDATATABLE );
+	//		createUserLocationEventsViews(conn, "UserLocationEvents",  EVENTDATATABLE, "UserLocationEvents");
 		
-			MysqlToXls oMysqlToXls = new MysqlToXls(conn);
-			Iterator<Integer> oIt = oUserIdList.iterator();
-			int i=0;
-			String sCurrentUserId = "";  String sFilename = "";
-			while (oIt.hasNext())	{
-				sCurrentUserId = oIt.next().toString();
-				sFilename = oPath.toString() + "\\LanguageLessonDurationDataUser" + sCurrentUserId + ".xls";
-				try	{
-					oMysqlToXls.generateXls(llEventDataUserView + sCurrentUserId, sFilename);
-				}
-				catch (Exception oEx)	{
-
-				}
-			}
-				
-			/**
-			PreparedStatement pstmtLanguageLessons = conn.prepareStatement(GET_LANGUAGE_LESSONS_QUERY);
-			pstmtLanguageLessons.setString(1, sUserId);
-			// Get all the Lnaguagge Lesson events for the specified user 
-			ResultSet rs = pstmtLanguageLessons.executeQuery();
-			PreparedStatement pstmtEventData = conn.prepareStatement(GET_TYPE_EVENT_DATA_QUERY);
-			pstmtEventData.setString(1, sKey);
+	//		MysqlToXls oMysqlToXls = new MysqlToXls(conn);
 			
-			// Get all the Event data  for the specified key
-			ResultSet rsEventData = pstmtEventData.executeQuery();
-			Map<Long, EventData>oEventMap = new HashMap<Long, EventData>();
-			EventData oEventData;
-			Long iCurrentEventId = (long) 0;
-			int i = 0; int j=0;  List<HashMap<String,Object>> oLanguageLessonEvents, oDurationData;
-			if (rs != null && rsEventData != null) {
-				oLanguageLessonEvents = convertResultSetToList(rs);
-				oDurationData = convertResultSetToList(rsEventData);
-				Iterator<HashMap<String, Object>> itLessonEvents = oLanguageLessonEvents.iterator();
-				while (itLessonEvents.hasNext())	{
-					HashMap<String,Object> oCurrentLessonData = itLessonEvents.next();
-					// Get the id of the current Language Lesson event
-					iCurrentEventId = (Long) oCurrentLessonData.get("id");
-					Iterator<HashMap<String, Object>> itDurationData = oDurationData.iterator();
-					while (itDurationData.hasNext())	{
-						HashMap<String,Object> oCurrentDurationData =  itDurationData.next();
-						Long  iCurrentDurationDataId = (Long) oCurrentDurationData.get("event_id");
-						if (iCurrentDurationDataId.equals(iCurrentEventId))	{
-							i++;
-						}
-						else {
-							j++;
-						}
-					}
-				}
-				
+			
+			HashMap<Integer, String> oIdMap= new HashMap<Integer, String>();
+			for(int i= 0; i < iUserIds.length; i++) {
+				oIdMap.put(iUserIds[i], iMappIds[i]);
 			}
-
-
-			if (pstmtLanguageLessons != null)
-				pstmtLanguageLessons.close();
-			if (pstmtEventData != null)
-				pstmtEventData.close();
-			**/
+			
 		}
+			
+//		generateExcelFile(oIdMap, oMysqlToXls);
+			
+			
 		// Do something with the Connection ... } 
 		catch (SQLException ex) { 
 			// handle any errors System.out.println("SQLException: " + ex.getMessage()); 
@@ -197,6 +159,49 @@ public class DataManipulation {
 	}
 
 	
+	private static void createUserLocationEventsViews(Connection conn, String sViewToBeCreated, String sViewTobeJoined, String sViewSelect) {
+		/*** Generate the event data for a particular view 			*****/
+		// Note Need Create view permissions for user to be in place e.g. 
+		// GRANT create view ON `maseltov-ou`.*  TO `maseltov-user`@'localhost' IDENTIFIED BY PASSWORD 'blahblahblah';
+		String sQuery = "";  String sCurrentUserId = "";
+		String sCreateView = "create view ";
+		Iterator<Integer> oIt = oUserIdList.iterator();
+		
+		PreparedStatement pstmtLLForUser = null;
+		while (oIt.hasNext())	{
+			sCurrentUserId = oIt.next().toString();
+			//sQuery = CREATE_LL_EVENTDATA_FOR_USER_VIEW;
+			sQuery = sCreateView + sViewToBeCreated + sCurrentUserId  + " as select "
+					+ sViewSelect  + ".userid, "  
+					+ sViewTobeJoined  + ".event_id,  " 
+					+ sViewSelect  + ".timestamp, "
+					+ sViewTobeJoined  + ".key, "
+					+ sViewTobeJoined  + ".value "
+					
+					+ " from " + sViewSelect  
+					+ " INNER JOIN " + sViewTobeJoined
+					+ " on " + sViewTobeJoined + ".event_id  "
+					+ " = " + sViewSelect  + ".id "
+					+ " where " + sViewSelect + ".userid = '" + sCurrentUserId + "'"
+					+ " order by " +  sViewSelect  + ".timestamp;";
+					;
+			try {
+			pstmtLLForUser = conn.prepareStatement(sQuery);
+			pstmtLLForUser.executeUpdate();
+			
+			if (pstmtLLForUser != null)
+				pstmtLLForUser.close();
+			}
+		
+			catch (SQLException ex) { 
+				// handle any errors System.out.println("SQLException: " + ex.getMessage()); 
+				System.out.println("SQLState: " + ex.getSQLState()); 
+				System.out.println("VendorError: " + ex.getErrorCode());
+				System.out.println("Message: " +  ex.getMessage());
+			}
+		}   
+		}
+	
 	public static List<HashMap<String,Object>> convertResultSetToList(ResultSet rs) throws SQLException {
 	    ResultSetMetaData md = rs.getMetaData();
 	    int columns = md.getColumnCount();
@@ -247,6 +252,70 @@ public class DataManipulation {
 		}
 	}
 	
-}
+	private static void insertDataIntoUserLocationEventData(Connection conn) throws SQLException 	{
+		Integer iCurrentUserId = new Integer(0);
+		Timestamp oLocationTimeStamp;
+		Time oLocationTime;
+		String sLat = "";  String sLong = ""; String sKey = ""; String sEvent_id = "";
+		int iResults = 0;
+		boolean gotLat = false, gotLong = false;
+		for(Iterator<Integer> oIt = oUserIdList.iterator(); oIt.hasNext();){
+			iCurrentUserId = oIt.next();
+			PreparedStatement stmt =
+				    conn.prepareStatement("select * from " + "UserLocationEvents" +iCurrentUserId );
+					ResultSet rs = stmt.executeQuery();
+					ResultSetMetaData colInfo = rs.getMetaData();
+			PreparedStatement oInstertStmt =  conn.prepareStatement(INSERT_USERLOCATIONEVENTDATA_QUERY);
+				   while (rs.next())	{
+					   oLocationTime = rs.getTime("timestamp");
+					   oLocationTimeStamp = rs.getTimestamp("timestamp");
+					   sKey = rs.getString("key");
+					   sEvent_id = rs.getString("event_id");
+					   if (sKey.equals("lat")) {
+						   sLat = rs.getString("value");
+						   gotLat = true;
+					   }
+					   else	{
+						   sLong = rs.getString("value");
+						   gotLong = true;
+					   }
+					if (gotLat && gotLong)	{
+						// Insert data
+						oInstertStmt.setString(1, iCurrentUserId.toString());
+						oInstertStmt.setString(2, sEvent_id);
+						oInstertStmt.setTimestamp(3, oLocationTimeStamp);
+						oInstertStmt.setString(4, sLong);
+						oInstertStmt.setString(5, sLat);
+						iResults = oInstertStmt.executeUpdate();
+						gotLat = false;
+						gotLong = false;
+					}   
+				   }
+				   oInstertStmt.close();  
+				   stmt.close();
+		}
+		
+	}
+	
+	private void generateExcelFile(HashMap<Integer, String> oIdMap, MysqlToXls oMysqlToXls) {
+		Integer iCurrentUserId = new Integer(0);
+		String sFilename = "";
+		String sCurrentUserId = "";
+		String sCurrentMappId = ""; 
+		Iterator<Integer> oItU = oUserIdList.iterator();
+		while (oItU.hasNext())	{
+			iCurrentUserId = oItU.next();
+			sCurrentUserId = iCurrentUserId.toString();
+			sCurrentMappId = oIdMap.get(iCurrentUserId);
+			sFilename = oPath.toString() + "\\LangLessonDurationUser" + sCurrentUserId + "-" + sCurrentMappId + ".xls";
+			try	{
+				oMysqlToXls.generateXls(llEventDataUserView + sCurrentUserId, sFilename);
+			}
+			catch (Exception oEx)	{
 
-
+			}
+		}
+	}
+		
+	}
+	
