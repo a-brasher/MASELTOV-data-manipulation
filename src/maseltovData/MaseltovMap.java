@@ -83,7 +83,8 @@ public MaseltovMap(String sUserId, String sServiceName,
 	private void linkTables() throws SQLException	{
 		Timestamp oLocationTimeStamp, oNextLocationTimeStamp, oEventDurationTimeStamp;
 		String sEventDurationValue ="0";
-		Document oKmlDoc = oKML.createAndSetDocument();
+		Document oKmlDoc = oKML.createAndSetDocument().withName("MASELTOV " + this.getServiceName() + " data");
+		Folder oFolder = oKmlDoc.createAndAddFolder();
 		// PreparedStatement stmt =conn.prepareStatement("select * from " + "UserLocationEventData where userid = '" + this.getUserId() +"';" );
 		PreparedStatement stmt =
 			    conn.prepareStatement("select * from " + this.getLocationAndTimeView() + " where userid = '" + this.getUserId() +"';" );
@@ -122,6 +123,9 @@ public MaseltovMap(String sUserId, String sServiceName,
 				 if (oEventDurationTimeStamp.compareTo(oLocationTimeStamp)>= 0 
 						 && oEventDurationTimeStamp.compareTo(oNextLocationTimeStamp) < 0  )	{
 					 //Event is at the location so create Point
+					 sLatitude = rsLocAndTime.getString("latitude");
+					 sLongitude = rsLocAndTime.getString("longitude");
+					 /*******
 					 Point point = KmlFactory.createPoint();
 					 Placemark placemark = KmlFactory.createPlacemark();
 					 placemark.setName(this.getServiceName() + " used for "  + sEventDurationValue + " seconds" );
@@ -132,7 +136,11 @@ public MaseltovMap(String sUserId, String sServiceName,
 					 sLongitude = rsLocAndTime.getString("longitude");
 					 point.getCoordinates().add(new Coordinate(sLongitude+ "," + sLatitude ));
 					 placemark.setGeometry(point);
-					 this.oKML.setFeature(placemark); 
+					 ***********/
+					 oFolder.createAndAddPlacemark()
+					 .withName(this.getServiceName() + " used for "  + sEventDurationValue + " seconds" )
+					 .withVisibility(true)
+					 .createAndSetPoint().addToCoordinates(sLongitude+ "," + sLatitude );
 				 }
 				 else
 					 break;

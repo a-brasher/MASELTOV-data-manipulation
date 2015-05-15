@@ -76,10 +76,9 @@ public class DataManipulation {
 												"UserLocationEventData",  Date.valueOf("2015-01-20"), conn);
 			
 			Kml oKML = oMAseltovMapCreator.createMapForDate(Date.valueOf("2015-01-20"));
-			
 			oKML.marshal();
-			
-			
+			oKML = oMAseltovMapCreator.createMapForDate(Date.valueOf("2015-01-22"));
+			oKML.marshal();
 		}
 			
 //		generateExcelFile(oIdMap, oMysqlToXls);
