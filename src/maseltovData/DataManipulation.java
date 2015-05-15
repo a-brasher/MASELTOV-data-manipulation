@@ -3,6 +3,7 @@ package maseltovData;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,7 +11,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import de.micromata.opengis.kml.v_2_2_0.*;
-
 
 
 public class DataManipulation {
@@ -71,6 +71,14 @@ public class DataManipulation {
 			for(int i= 0; i < iUserIds.length; i++) {
 				oIdMap.put(iUserIds[i], iMappIds[i]);
 			}
+			 
+			MaseltovMap oMAseltovMapCreator = new MaseltovMap("411", "Language lessons", "llEventDataUser", 
+												"UserLocationEventData",  Date.valueOf("2015-01-20"), conn);
+			
+			Kml oKML = oMAseltovMapCreator.createMapForDate(Date.valueOf("2015-01-20"));
+			
+			oKML.marshal();
+			
 			
 		}
 			
