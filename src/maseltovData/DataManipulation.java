@@ -1,5 +1,7 @@
 package maseltovData;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
@@ -76,9 +78,15 @@ public class DataManipulation {
 												"UserLocationEventData",  Date.valueOf("2015-01-20"), conn);
 			
 			Kml oKML = oMAseltovMapCreator.createMapForDate(Date.valueOf("2015-01-20"));
-			oKML.marshal();
-			oKML = oMAseltovMapCreator.createMapForDate(Date.valueOf("2015-01-22"));
-			oKML.marshal();
+		
+			File oFile = new File (oPath.toString() + "\\KML" + "-411" + "-" + "Language lessons" + "-v2.kml");
+			try {
+				oKML.marshal(oFile);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 		}
 			
 //		generateExcelFile(oIdMap, oMysqlToXls);
