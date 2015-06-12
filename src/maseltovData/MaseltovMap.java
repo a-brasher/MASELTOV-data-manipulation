@@ -86,9 +86,9 @@ public MaseltovMap(String sUserId, String sServiceName,
 	 */
 	private void linkTables() throws SQLException	{
 		Timestamp oLocationTimeStamp, oNextLocationTimeStamp, oEventDurationTimeStamp;
-		
-		java.text.SimpleDateFormat oMonthFormat = new java.text.SimpleDateFormat("MM");
-		java.text.DateFormat oMonthFormat1 = java.text.DateFormat.getDateInstance(DateFormat.MEDIUM);
+		java.text.DateFormat oMonthFormat = java.text.DateFormat.getDateInstance(DateFormat.MEDIUM);
+		// KML date format includes T between date and time
+		java.text.SimpleDateFormat oKmlDateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
 		String sEventDurationValue ="0";
 		Document oKmlDoc = oKML.createAndSetDocument().withName("MASELTOV " + this.getServiceName() + " data");
 		//Folder oFolder = oKmlDoc.createAndAddFolder().withName("Date: " + this.oDateOfMap.toString());
@@ -137,7 +137,7 @@ public MaseltovMap(String sUserId, String sServiceName,
 						&& oEventDurationTimeStamp.compareTo(oNextLocationTimeStamp) < 0  )	{
 					if ( iEventDay > iPreviousDay || bIsFirstDay)  {  //It is  anew day so add a folder for the day
 						// Events at a particular location might span more than one day
-						oFolder = oKmlDoc.createAndAddFolder().withName("Date: " +  oMonthFormat1.format(oNextDayCalendar.getTime()));
+						oFolder = oKmlDoc.createAndAddFolder().withName("Date: " +  oMonthFormat.format(oNextDayCalendar.getTime()));
 						iPreviousDay = iEventDay;
 						bIsFirstDay = false;
 					}
@@ -146,8 +146,8 @@ public MaseltovMap(String sUserId, String sServiceName,
 					sLongitude = rsLocAndTime.getString("longitude");
 					oFolder.createAndAddPlacemark()
 					.withName(this.getServiceName() + " used for "  + sEventDurationValue + " seconds, at " 
-							+ oEventDurationTimeStamp.toString() + " iCurrentDay = " + iCurrentDayTest + " iEventDay = " + iEventDay)
-							.withTimePrimitive(new TimeStamp().withWhen(oEventDurationTimeStamp.toString()))
+							+ oEventDurationTimeStamp.toString())
+							.withTimePrimitive(new TimeStamp().withWhen(oKmlDateFormat.format(oEventDurationTimeStamp)))
 							//		.withTimePrimitive(new TimeSpan().withBegin(oEventDurationTimeStamp.toString()).withEnd((oEventDurationTimeStamp+).)
 							.withVisibility(true)
 							.createAndSetPoint().addToCoordinates(sLongitude+ "," + sLatitude );

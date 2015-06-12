@@ -66,7 +66,7 @@ public class DataManipulation {
 	//		createEventDataViews(conn, llEventDataUserView, EVENTDATATABLE );
 	//		createUserLocationEventsViews(conn, "UserLocationEvents",  EVENTDATATABLE, "UserLocationEvents");
 		
-	//		MysqlToXls oMysqlToXls = new MysqlToXls(conn);
+			
 			
 			
 			HashMap<Integer, String> oIdMap= new HashMap<Integer, String>();
@@ -74,12 +74,15 @@ public class DataManipulation {
 				oIdMap.put(iUserIds[i], iMappIds[i]);
 			}
 			 
-			MaseltovMap oMAseltovMapCreator = new MaseltovMap("411", "Language lessons", "llEventDataUser", 
+			MysqlToXls oMysqlToXls = new MysqlToXls(conn);
+			generateExcelFile(oIdMap, oMysqlToXls);
+			
+			MaseltovMap oMAseltovMapCreator = new MaseltovMap("418", "Language lessons", "llEventDataUser", 
 												"UserLocationEventData",  Date.valueOf("2015-01-20"), conn);
 			
 			Kml oKML = oMAseltovMapCreator.createMapForDate(Date.valueOf("2015-01-20"));
 		
-			File oFile = new File (oPath.toString() + "\\KML" + "-411" + "-" + "Language lessons" + "-v2.kml");
+			File oFile = new File (oPath.toString() + "\\KML" + "-418" + "-" + "Language lessons" + "-v2.kml");
 			try {
 				oKML.marshal(oFile);
 			} catch (FileNotFoundException e) {
@@ -87,18 +90,16 @@ public class DataManipulation {
 				e.printStackTrace();
 			}
 			
+		
+			
 		}
-			
-//		generateExcelFile(oIdMap, oMysqlToXls);
-			
-			
-		// Do something with the Connection ... } 
+		// Do something with the Connection ... 
 		catch (SQLException ex) { 
 			// handle any errors System.out.println("SQLException: " + ex.getMessage()); 
 			System.out.println("SQLState: " + ex.getSQLState()); 
 			System.out.println("VendorError: " + ex.getErrorCode()); }
 	}
-
+	
 	
 	private static void createLanguageLearningEventsViews(Connection conn) {
 		// Note Need Create view permissions for user to be in place e.g. 
@@ -312,7 +313,12 @@ public class DataManipulation {
 		
 	}
 	
-	private void generateExcelFile(HashMap<Integer, String> oIdMap, MysqlToXls oMysqlToXls) {
+	/**
+	 * Generate an Excel file for a particular SQL query.
+	 * @param oIdMap
+	 * @param oMysqlToXls
+	 */
+	private static void generateExcelFile(HashMap<Integer, String> oIdMap, MysqlToXls oMysqlToXls) {
 		Integer iCurrentUserId = new Integer(0);
 		String sFilename = "";
 		String sCurrentUserId = "";
@@ -331,6 +337,41 @@ public class DataManipulation {
 			}
 		}
 	}
-		
+	
+	
+	
+	/**
+	 * Generate the Excel data from a particular query on a particular table for
+	 * a set of user ids.
+	 * 
+	 * @param oIdMap
+	 * @param sQuery - the postfix of the query (the prefix is expected to be select * from sTableOrViewName
+	 * @param sTableOrViewName
+	 * @param oMysqlToXls
+	 */
+	private static void generateExcelFile(HashMap<Integer, String> oIdMap,
+			String sQuery, String sTableOrViewName, MysqlToXls oMysqlToXls) {
+		Integer iCurrentUserId = new Integer(0);
+		String sFilename = "";
+		String sCurrentUserId = "";
+		String sCurrentMappId = "";
+		Iterator<Integer> oItU = oUserIdList.iterator();
+		String sQueryStart = "select * from " +  sTableOrViewName + sQuery ; 
+		while (oItU.hasNext()) {
+			iCurrentUserId = oItU.next();
+			sCurrentUserId = iCurrentUserId.toString();
+			sCurrentMappId = oIdMap.get(iCurrentUserId);
+			sFilename = oPath.toString() + "\\" + sTableOrViewName
+					+ sCurrentUserId + "-" + sCurrentMappId + ".xls";
+			try {
+				oMysqlToXls.generateXls(llEventDataUserView + sCurrentUserId,
+						sFilename);
+				oMysqlToXls.generateXls(sTableOrViewName, sQueryStart, sFilename);
+			} catch (Exception oEx) {
+
+			}
+		}
+	}
+
 	}
 	
