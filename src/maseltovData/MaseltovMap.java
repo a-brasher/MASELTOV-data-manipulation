@@ -86,6 +86,7 @@ public MaseltovMap(String sUserId, String sServiceName,
 	 */
 	private void linkTables() throws SQLException	{
 		Timestamp oLocationTimeStamp, oNextLocationTimeStamp, oEventDurationTimeStamp;
+		long iTimeDuration, iTimeEnd, iTimeStart;
 		java.text.DateFormat oMonthFormat = java.text.DateFormat.getDateInstance(DateFormat.MEDIUM);
 		// KML date format includes T between date and time
 		java.text.SimpleDateFormat oKmlDateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
@@ -111,6 +112,7 @@ public MaseltovMap(String sUserId, String sServiceName,
 		Calendar oNextDayCalendar = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
 		int iCurrentDay = 0;   int iPreviousDay = 0; 	int iNexttDay = 0; int iPreviousEventDay = 0;
 		int iEventDay = 0;	 int iCurrentDayTest = 0;
+		long iEventDuration = 0;
 		boolean bIsFirstDay = true;
 		while (rsLocAndTime.next())	{
 			oLocationTimeStamp = rsLocAndTime.getTimestamp("timestamp");
@@ -129,6 +131,8 @@ public MaseltovMap(String sUserId, String sServiceName,
 			while (rsEventDurAndTime.next())	{
 				oEventDurationTimeStamp = rsEventDurAndTime.getTimestamp("timestamp");
 				sEventDurationValue = rsEventDurAndTime.getString("value");
+				//iEventDuration = Math.round(rsEventDurAndTime.getDouble("value"));
+				
 				oNextDayCalendar.setTimeInMillis(oEventDurationTimeStamp.getTime());
 				iEventDay = oNextDayCalendar.get(Calendar.DAY_OF_YEAR);
 				// Check that LL event timestamp is equal or after the current location timestamp, 
@@ -142,15 +146,30 @@ public MaseltovMap(String sUserId, String sServiceName,
 						bIsFirstDay = false;
 					}
 					//Event is at the location so create Point
+					iEventDuration  = Math.round(Double.parseDouble(sEventDurationValue));
+					iTimeDuration = 1000*iEventDuration;
+					iTimeStart = oEventDurationTimeStamp.getTime();
+					iTimeEnd = iTimeStart + iTimeDuration;
 					sLatitude = rsLocAndTime.getString("latitude");
 					sLongitude = rsLocAndTime.getString("longitude");
-					oFolder.createAndAddPlacemark()
-					.withName(this.getServiceName() + " used for "  + sEventDurationValue + " seconds, at " 
-							+ oEventDurationTimeStamp.toString())
-							.withTimePrimitive(new TimeStamp().withWhen(oKmlDateFormat.format(oEventDurationTimeStamp)))
+					Placemark oPmk = oFolder.createAndAddPlacemark()
+					.withName(this.getServiceName() )
+//							.withDescription(" used for "  + sEventDurationValue + " seconds, at "
+							.withDescription(" used for "  + iEventDuration + " seconds, at " 
+									+ oEventDurationTimeStamp.toString())
+				//			.withTimePrimitive(new TimeStamp().withWhen(oKmlDateFormat.format(oEventDurationTimeStamp)))
+				//			.withTimePrimitive(new TimeSpan().withBegin(((TimeStampKml)oEventDurationTimeStamp).toString()).withEnd(new TimeStampKml(iTimeEnd).toString()  ))
+							.withTimePrimitive(new TimeSpan().withBegin((new TimeStampKml(iTimeStart)).toString()).withEnd(new TimeStampKml(iTimeEnd).toString()  ))
+							
+							//String.valueOf(iTimeDuration)
+				//			.withTimePrimitive(new TimeSpan().withEnd(String.valueOf(iTimeDuration))
+				//					.withBegin(oEventDurationTimeStamp.toString())
+				//					.withWhen(oKmlDateFormat.format(oEventDurationTimeStamp))
 							//		.withTimePrimitive(new TimeSpan().withBegin(oEventDurationTimeStamp.toString()).withEnd((oEventDurationTimeStamp+).)
-							.withVisibility(true)
-							.createAndSetPoint().addToCoordinates(sLongitude+ "," + sLatitude );
+							.withVisibility(true);
+					
+				oPmk.createAndSetPoint().addToCoordinates(sLongitude+ "," + sLatitude );
+				//	oPmk. createAndSetTimeStamp().addToTimePrimitiveObjectExtension( new TimeStamp().withWhen(oKmlDateFormat.format(oEventDurationTimeStamp)));
 				}
 				else {
 					break;

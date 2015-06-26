@@ -34,7 +34,10 @@ public class DataManipulation {
 	public final static String INSERT_USERLOCATIONEVENTDATA_QUERY =
 		"INSERT INTO UserLocationEventData (userid, event_id, timestamp, longitude, latitude) " +
 		"VALUES (?, ?, ?, ?, ?) ";
-			
+	/** SQL statement to insert a new `languagelearningLessonTestScoreDataCols Record into the `languagelearningLessonTestScoreDataCols table.*/
+	public final static String INSERT_LANGUAGELEARNINGLESSONTESTSCOREDATACOLS_QUERY =
+		"INSERT INTO languagelearningLessonTestScoreDataCols (userid, event_id, timestamp, lesson, publication, score) " +
+		"VALUES (?, ?, ?, ?, ?, ?) ";
 	public final static String CREATE_LL_EVENTDATA_FOR_USER_VIEW_POST = " as select * from LLEventsUser";
 	static Integer iUserIds[] = new Integer[] {407, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 424, 425, 428 };
 	static String iMappIds[] = 	new String[] {"MApp81", "MApp80", "MApp82", "MApp83", "MApp84", "MApp85", "MApp86", "MApp87", "MApp88", "MApp89", "MApp90", "MApp91", "MApp92", "MApp93", "MApp94", "MApp98", "MApp999", "MApp100"};
@@ -73,16 +76,18 @@ public class DataManipulation {
 			for(int i= 0; i < iUserIds.length; i++) {
 				oIdMap.put(iUserIds[i], iMappIds[i]);
 			}
+			
+	//		insertDataIntoLanguageLessonTestScoreData(conn);
 			 
-			MysqlToXls oMysqlToXls = new MysqlToXls(conn);
-			generateExcelFile(oIdMap, oMysqlToXls);
+//			MysqlToXls oMysqlToXls = new MysqlToXls(conn);
+// 			generateExcelFile(oIdMap, oMysqlToXls);
 			
 			MaseltovMap oMAseltovMapCreator = new MaseltovMap("418", "Language lessons", "llEventDataUser", 
 												"UserLocationEventData",  Date.valueOf("2015-01-20"), conn);
 			
 			Kml oKML = oMAseltovMapCreator.createMapForDate(Date.valueOf("2015-01-20"));
 		
-			File oFile = new File (oPath.toString() + "\\KML" + "-418" + "-" + "Language lessons" + "-v2.kml");
+			File oFile = new File (oPath.toString() + "\\KML" + "-418" + "-" + "Language lessons" + "-v8.kml");
 			try {
 				oKML.marshal(oFile);
 			} catch (FileNotFoundException e) {
@@ -90,6 +95,7 @@ public class DataManipulation {
 				e.printStackTrace();
 			}
 			
+/*****************************/
 		
 			
 		}
@@ -268,6 +274,12 @@ public class DataManipulation {
 		}
 	}
 	
+	/**
+	 * Instert data into the UserLocationEventData table, hence creating 'latitude'
+	 * and 'longitude' columns instead of key-value pairs.
+	 * @param conn
+	 * @throws SQLException
+	 */
 	private static void insertDataIntoUserLocationEventData(Connection conn) throws SQLException 	{
 		Integer iCurrentUserId = new Integer(0);
 		Timestamp oLocationTimeStamp;
@@ -313,6 +325,65 @@ public class DataManipulation {
 		
 	}
 	
+	
+	/**
+	 * Instert data into the UserLocationEventData table, hence creating 'latitude'
+	 * and 'longitude' columns instead of key-value pairs.
+	 * @param conn
+	 * @throws SQLException
+	 */
+	private static void insertDataIntoLanguageLessonTestScoreData(Connection conn) throws SQLException 	{
+		Integer iCurrentUserId = new Integer(0);
+		Timestamp oTimeStamp;
+		Time oTime;
+		String sLesson = "";  String sPublication = ""; String sKey = ""; String sEvent_id = ""; String sUser_id = "";
+		String sScore = "";  
+		int iResults = 0;
+		boolean gotLesson = false, gotPublication = false, gotScore = false;
+		
+			
+		PreparedStatement stmt =
+				conn.prepareStatement("select * from " + "languagelearningLessonTestScoreData order by event_id;");
+		ResultSet rs = stmt.executeQuery();
+		ResultSetMetaData colInfo = rs.getMetaData();
+		PreparedStatement oInsertStmt =  conn.prepareStatement(INSERT_LANGUAGELEARNINGLESSONTESTSCOREDATACOLS_QUERY);
+		while (rs.next())	{
+			oTime = rs.getTime("timestamp");
+			oTimeStamp = rs.getTimestamp("timestamp");
+			sKey = rs.getString("key");
+			sEvent_id = rs.getString("event_id");
+			sUser_id = rs.getString("userid");
+			if (sKey.equals("lesson")) {
+				sLesson = rs.getString("value");
+				gotLesson = true;
+			}
+			else if (sKey.equals("publication")) {
+				sPublication = rs.getString("value");
+				gotPublication = true;
+			}
+			else if (sKey.equals("score")) {
+				sScore = rs.getString("value");
+				gotScore = true;
+			}
+			if (gotLesson && gotPublication && gotScore)	{
+				// Insert data
+				oInsertStmt.setString(1, sUser_id);
+				oInsertStmt.setString(2, sEvent_id);
+				oInsertStmt.setTimestamp(3, oTimeStamp);
+				oInsertStmt.setString(4, sLesson);
+				oInsertStmt.setString(5, sPublication);
+				oInsertStmt.setString(6, sScore);
+				iResults = oInsertStmt.executeUpdate();
+				gotLesson = false;
+				gotPublication = false;
+				gotScore = false;
+			}   
+		}
+		oInsertStmt.close();  
+		stmt.close();
+
+		
+	}
 	/**
 	 * Generate an Excel file for a particular SQL query.
 	 * @param oIdMap
