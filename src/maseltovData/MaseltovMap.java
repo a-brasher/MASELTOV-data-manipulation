@@ -172,6 +172,7 @@ public MaseltovMap(String sUserId, String sServiceName,
 				//	oPmk. createAndSetTimeStamp().addToTimePrimitiveObjectExtension( new TimeStamp().withWhen(oKmlDateFormat.format(oEventDurationTimeStamp)));
 				}
 				else {
+					rsEventDurAndTime.previous(); //In  case it's in the next location?
 					break;
 				}
 
