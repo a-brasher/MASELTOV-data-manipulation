@@ -3,6 +3,7 @@
  */
 package maseltovData;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -28,7 +29,14 @@ import de.micromata.opengis.kml.v_2_2_0.*;
  *
  */
 public class MaseltovMap {
-	// The user id to genreate the map for 
+	/** A reference to the system file path separator.*/
+	protected final static String	sFS						= System.getProperty("file.separator");
+	/** A reference to the main resources directory.*/
+	protected final static String	sResourcesPATH 					= "resources"+sFS;
+	/** A reference to the main resources directory.*/
+	protected final static String	sLLStylesPATH 					= sResourcesPATH + "KML-LanguageLesson-styles.kml";
+	protected final static String	sLLStylePrefix					= "#LanguageLesson";
+	// The user id to generate the map for 
 	private String sUserId;
 	// the MASELTOV service to generate the map for
 	private String sServiceName;
@@ -92,7 +100,14 @@ public MaseltovMap(String sUserId, String sServiceName,
 		java.text.SimpleDateFormat oKmlDateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
 		String sEventDurationValue ="0";
 		Document oKmlDoc = oKML.createAndSetDocument().withName("MASELTOV " + this.getServiceName() + " data");
+		List<StyleSelector> oStyleList = createLangugeLessonDurationStyles();
+		oKmlDoc.setStyleSelector(oStyleList);
+		/****************
+		Style oLangLessonStyle = oKmlDoc.createAndAddStyle();
+		oLangLessonStyle.setId("LanguageLesson");
+		oLangLessonStyle.createAndSetIconStyle().setIcon(new Icon().withHref("http://compendiumld.open.ac.uk/icons/raster/learning-design/nodeimages/id_tool.png"));;
 		//Folder oFolder = oKmlDoc.createAndAddFolder().withName("Date: " + this.oDateOfMap.toString());
+		 ******************/
 		Folder oFolder = new Folder();
 		// PreparedStatement stmt =conn.prepareStatement("select * from " + "UserLocationEventData where userid = '" + this.getUserId() +"';" );
 		PreparedStatement stmt =
@@ -112,7 +127,7 @@ public MaseltovMap(String sUserId, String sServiceName,
 		Calendar oNextDayCalendar = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
 		int iCurrentDay = 0;   int iPreviousDay = 0; 	int iNexttDay = 0; int iPreviousEventDay = 0;
 		int iEventDay = 0;	 int iCurrentDayTest = 0;
-		long iEventDuration = 0;
+		int iEventDuration = 0;
 		boolean bIsFirstDay = true;
 		while (rsLocAndTime.next())	{
 			oLocationTimeStamp = rsLocAndTime.getTimestamp("timestamp");
@@ -146,7 +161,8 @@ public MaseltovMap(String sUserId, String sServiceName,
 						bIsFirstDay = false;
 					}
 					//Event is at the location so create Point
-					iEventDuration  = Math.round(Double.parseDouble(sEventDurationValue));
+					//iEventDuration  = Math.round(Double.parseDouble(sEventDurationValue));
+					iEventDuration  = Math.round(Float.parseFloat(sEventDurationValue));
 					iTimeDuration = 1000*iEventDuration;
 					iTimeStart = oEventDurationTimeStamp.getTime();
 					iTimeEnd = iTimeStart + iTimeDuration;
@@ -154,22 +170,14 @@ public MaseltovMap(String sUserId, String sServiceName,
 					sLongitude = rsLocAndTime.getString("longitude");
 					Placemark oPmk = oFolder.createAndAddPlacemark()
 					.withName(this.getServiceName() )
-//							.withDescription(" used for "  + sEventDurationValue + " seconds, at "
 							.withDescription(" used for "  + iEventDuration + " seconds, at " 
 									+ oEventDurationTimeStamp.toString())
-				//			.withTimePrimitive(new TimeStamp().withWhen(oKmlDateFormat.format(oEventDurationTimeStamp)))
-				//			.withTimePrimitive(new TimeSpan().withBegin(((TimeStampKml)oEventDurationTimeStamp).toString()).withEnd(new TimeStampKml(iTimeEnd).toString()  ))
-							.withTimePrimitive(new TimeSpan().withBegin((new TimeStampKml(iTimeStart)).toString()).withEnd(new TimeStampKml(iTimeEnd).toString()  ))
-							
-							//String.valueOf(iTimeDuration)
-				//			.withTimePrimitive(new TimeSpan().withEnd(String.valueOf(iTimeDuration))
-				//					.withBegin(oEventDurationTimeStamp.toString())
-				//					.withWhen(oKmlDateFormat.format(oEventDurationTimeStamp))
-							//		.withTimePrimitive(new TimeSpan().withBegin(oEventDurationTimeStamp.toString()).withEnd((oEventDurationTimeStamp+).)
+							.withTimePrimitive(new TimeSpan().withBegin((new TimeStampKml(iTimeStart)).toString())
+							.withEnd(new TimeStampKml(iTimeEnd).toString()  ))
 							.withVisibility(true);
-					
-				oPmk.createAndSetPoint().addToCoordinates(sLongitude+ "," + sLatitude );
-				//	oPmk. createAndSetTimeStamp().addToTimePrimitiveObjectExtension( new TimeStamp().withWhen(oKmlDateFormat.format(oEventDurationTimeStamp)));
+					oPmk.createAndSetPoint().addToCoordinates(sLongitude+ "," + sLatitude );
+					//oPmk.setStyleUrl("#LanguageLesson");
+					this.setStyleUrl(oPmk, iEventDuration);
 				}
 				else {
 					rsEventDurAndTime.previous(); //In  case it's in the next location?
@@ -272,6 +280,100 @@ public MaseltovMap(String sUserId, String sServiceName,
 		}
 		return oKML;
 		
+	}
+	
+	/**
+	 * Load KML from file specified by the String sFilePath.
+	 * The file will be validated as it is loaded, and if the file is not 
+	 * valid KML a null value will be returned by this method. 
+	 * @param sStyleFilePath
+	 * @return the KML loaded from a valid KML file, null otherwise.
+	 */
+	public Kml loadKmlFromFile(String sFilePath)	{
+		   Kml kml = null;
+	        try {
+	            kml = Kml.unmarshal(new File(sFilePath));
+	        } catch (RuntimeException ex) {
+	            kml = Kml.unmarshal(new File(sFilePath), false);
+	        }
+		return kml;
+	}
+	
+	/**
+	 * Creates and returns a list of KML Styles 
+	 * @return list of styles List<StyleSelector>
+	 */
+	private List<StyleSelector>  createLangugeLessonDurationStyles()	{
+		Kml oKml = null;
+		List<StyleSelector> oList = null;
+		oKml = this.loadKmlFromFile(sLLStylesPATH);
+		Document oDoc = (Document) oKml.getFeature();
+		oList = oDoc.getStyleSelector();
+		return oList;
+	}
+	
+	/**
+	 * @param oPmk
+	 * @param iDuration
+	 */
+	private void setStyleUrl(Placemark oPmk, int iDuration)	{
+		//Note  int has a  maximum value of 2^31 - 1 in Java 8, i.e 2147483647 = 596523.2 hours = 24855 days 
+		if (iDuration<60)
+			oPmk.setStyleUrl(sLLStylePrefix+"0to1");
+		else if (iDuration<120)
+			oPmk.setStyleUrl(sLLStylePrefix+"1to2");
+		else if (iDuration<180)
+			oPmk.setStyleUrl(sLLStylePrefix+"2to3");
+		else if (iDuration<240)
+			oPmk.setStyleUrl(sLLStylePrefix+"3to4");
+		else if (iDuration<300)
+			oPmk.setStyleUrl(sLLStylePrefix+"4to5");
+		else if (iDuration<360)
+			oPmk.setStyleUrl(sLLStylePrefix+"5to6");
+		else if (iDuration<420)
+			oPmk.setStyleUrl(sLLStylePrefix+"6to7");
+		else if (iDuration<480)
+			oPmk.setStyleUrl(sLLStylePrefix+"7to8");
+		else if (iDuration<540)
+			oPmk.setStyleUrl(sLLStylePrefix+"8to9");
+		else if (iDuration<600)
+			oPmk.setStyleUrl(sLLStylePrefix+"9to10");
+		else if (iDuration<660)
+			oPmk.setStyleUrl(sLLStylePrefix+"10to11");
+		else if (iDuration<720)
+			oPmk.setStyleUrl(sLLStylePrefix+"11to12");
+		else if (iDuration<780)
+			oPmk.setStyleUrl(sLLStylePrefix+"12to13");
+		else if (iDuration<840)
+			oPmk.setStyleUrl(sLLStylePrefix+"13to14");
+		else if (iDuration<900)
+			oPmk.setStyleUrl(sLLStylePrefix+"14to15");
+		else if (iDuration<960)
+			oPmk.setStyleUrl(sLLStylePrefix+"15to16");
+		else if (iDuration<1020)
+			oPmk.setStyleUrl(sLLStylePrefix+"16to17");
+		else if (iDuration<1080)
+			oPmk.setStyleUrl(sLLStylePrefix+"17to18");
+		else if (iDuration<1140)
+			oPmk.setStyleUrl(sLLStylePrefix+"18to19");
+		else if (iDuration<1200)
+			oPmk.setStyleUrl(sLLStylePrefix+"19to20");
+		else if (iDuration<1260)
+			oPmk.setStyleUrl(sLLStylePrefix+"20to21");
+		else if (iDuration<1320)
+			oPmk.setStyleUrl(sLLStylePrefix+"21to22");
+		else if (iDuration<1380)
+			oPmk.setStyleUrl(sLLStylePrefix+"22to23");
+		else if (iDuration<1440)
+			oPmk.setStyleUrl(sLLStylePrefix+"23to24");
+		else if (iDuration<1500)
+			oPmk.setStyleUrl(sLLStylePrefix+"24to25");
+		else if (iDuration<1560)
+			oPmk.setStyleUrl(sLLStylePrefix+"25to26");
+		else if (iDuration<1620)
+			oPmk.setStyleUrl(sLLStylePrefix+"26to27");
+		else 
+			oPmk.setStyleUrl(sLLStylePrefix);
 	}
 	
 }

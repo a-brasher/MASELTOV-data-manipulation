@@ -87,7 +87,7 @@ public class DataManipulation {
 			
 			Kml oKML = oMAseltovMapCreator.createMapForDate(Date.valueOf("2015-01-20"));
 		
-			File oFile = new File (oPath.toString() + "\\KML" + "-418" + "-" + "Language lessons" + "-v9.kml");
+			File oFile = new File (oPath.toString() + "\\KML" + "-418" + "-" + "Language lessons" + "-v11.kml");
 			try {
 				oKML.marshal(oFile);
 			} catch (FileNotFoundException e) {
