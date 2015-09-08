@@ -71,7 +71,8 @@ public MaseltovMap(String sUserId, String sServiceName,
 		this.sEventDurationAndTimeView = sEventDurationAndTimeView;
 		this.sLocationAndTimeView = sLocationAndTimeView;
 		this.oDateOfMap = oDateOfMap;
-		this.oKML = KmlFactory.createKml();
+//		this.oKML = KmlFactory.createKml();
+		this.oKML = new MyKml();
 		this.conn = conn;
 	}
 
@@ -170,8 +171,9 @@ public MaseltovMap(String sUserId, String sServiceName,
 					sLongitude = rsLocAndTime.getString("longitude");
 					Placemark oPmk = oFolder.createAndAddPlacemark()
 					.withName(this.getServiceName() )
-							.withDescription(" used for "  + iEventDuration + " seconds, at " 
-									+ oEventDurationTimeStamp.toString())
+					// Note - might need to enclose in CDATA tags so as to avoid HTML being stripped out by Google Maps/Earth e.g.  <![CDATA[used for <em>15 seconds</em>, at <em>2015-01-20 18:10:00.0</em>]]>
+					.withDescription("used for <em>"  + iEventDuration + " seconds</em>, at " 
+									+ "<em>" + oEventDurationTimeStamp.toString() + "</em>" )
 							.withTimePrimitive(new TimeSpan().withBegin((new TimeStampKml(iTimeStart)).toString())
 							.withEnd(new TimeStampKml(iTimeEnd).toString()  ))
 							.withVisibility(true);

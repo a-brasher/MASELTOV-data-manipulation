@@ -2,6 +2,8 @@ package maseltovData;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
@@ -11,6 +13,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+
+import com.sun.xml.bind.marshaller.DataWriter;
+import com.sun.xml.bind.marshaller.DumbEscapeHandler;
 
 import de.micromata.opengis.kml.v_2_2_0.*;
 
